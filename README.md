@@ -1,6 +1,6 @@
 # PicoCTF-2017
 
-### Weird RSA
+## Weird RSA - 90
 
 We have:
 ```
@@ -26,7 +26,8 @@ sage: hex(int(m))[2:-1].decode("hex")
 'Theres_more_than_one_way_to_RSA'
 ```
 <hr>
-### Hashchain
+
+## Hashchain - 90
 
 From the hint, weakness of MD5: too fast to calculate!
 
@@ -51,10 +52,8 @@ Please authenticate as user 3862
 Next token?
 
 ```
-
 Just need a simple code to get the hash that is previous to the given one in the chain
-
-
+```python
 import md5
 
 seed = "3862"
@@ -70,16 +69,15 @@ while True:
 		print prev
 		break    
 
-'''
-
+```
 Submit the hash and I got the flag
-
 ```python
 fd25d5eb5ccaee7cd9e19aa19a6716c7
 Hello user 3862! Here's the flag: b41769e77d350c3d5655eab553221f0c
 ```
+<hr>
 
-### Broadcast
+### Broadcast - 120
 
 ```python
 e = 3
@@ -104,3 +102,138 @@ sage: m = M1 ** (1/3)
 sage: hex(int(m))[2:-1].decode("hex")
 'broadcast_with_small_e_is_killer_67051493201'
 ```
+<hr>
+
+## SmallRSA - 120
+
+This RSA has a really large encryption exponent e ( e~ the size of N) and from the hint, we can guess that d should be small
+
+Using the Wiener's attack on small private key
+<https://en.wikipedia.org/wiki/Wiener%27s_attack><br>
+
+k/d is somewhere among the convergents of e/N
+
+```python
+sage: lst = continued_fraction(e/n)
+sage: conv = lst.convergents()
+sage: for i in conv:
+....: 
+....:     k = i.numerator()
+....:     d = i.denominator()
+....: 
+....:     try:
+....:         m = hex(int(pow(c,d,n)))[2:-1].decode("hex")
+....:         if "flag" in m:
+....:             print m
+....:     except:
+....:         continue
+....:     
+flag{Are_any_RSA_vals_good_13441315963}
+```
+<hr>
+
+## SmallSign - 140
+
+We have to forge a RSA signature of a challenge in 60 sec, given the ability to query signature of any number we want, before the challenge appears/or we run out of time. 
+
+Here is the idea, 
+let `s[i]` be the signature of `m[i]`, ignore the fact that there's hashing, the encryption should be like:
+ `s[i] = m[i]^d mod N`
+
+So, the challenge give us a `m`, ask us for `s`, then if we have all the prime factors of `m` and their signatures, we can surely reconstruct `s`.
+ `m = m[1]*m[2]*m[3]*...*m[n]`
+then 
+ `s = ( s[1]*s[2]*s[3]*...*s[n] ) mod N`
+
+Since the challenge gave us 60s (I think it's actually 30s :( ), we have to query all the possible signatures of primes we can (about ~600 primes), and wish for a smooth number as our "challenge"
+Here is my script:
+
+```python
+from pwn import *
+
+lstPrime[] = ['''<list of first 600 primes here>''']
+
+test_data = 600
+
+while (True):
+	host, port = "shell2017.picoctf.com", 5596
+	r = remote(host, port)
+
+	rule = re.compile('[0-9]')
+	data = r.readuntil("(-1 to stop):")
+	data = rule.findall(data)
+	data = "".join(data)
+	data = data[2:-6]
+
+	n = int(data)
+	lstSign = []
+
+	count = 0
+
+	print "start collecting data"
+	
+	try:
+		while count<=test_data:
+    
+    			r.writeline(str(lstPrime[count]))
+
+    			data = r.readuntil("(-1 to stop):")
+    
+    			# print data
+
+    			chal = rule.findall(data)[:-1]
+    			chal = "".join(chal)
+    			chal = int(chal)
+
+    			lstSign.append(chal)
+    			count += 1
+    			# print count
+	except:
+		print "query out of time"
+		test_data -= 10
+		print "try smaller test data", test_data
+		continue
+
+	print "finish colelcting data"
+	r.writeline("-1")
+
+	data = r.readuntil("challenge:")
+	print data
+	
+	chal = rule.findall(data)
+	chal = "".join(chal)
+	chal = int(chal)
+	print "challenge:", chal
+
+	i = 0
+	s = 1
+	found = True
+	print ""
+	while (chal<>1):
+    
+    		if i>=count:
+        		print "not found"
+        		found = False
+			break
+
+    		if (chal % lstPrime[i] == 0):
+			s = s * lstSign[i]
+        		chal = chal/lstPrime[i]
+        		print lstPrime[i], lstSign[i]
+    		else:
+        		i += 1
+        		continue
+
+	if (not found):
+		r.close()
+		print "Cannot find sign of divisor, try again ..."
+	else:
+		
+		print "N: ", n
+		sign = s%n 
+		
+		print "\n", sign
+		r.writeline(str(sign))
+		print r.readall() 
+		break
+	
