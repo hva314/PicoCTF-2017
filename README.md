@@ -111,7 +111,7 @@ This RSA has a really large encryption exponent e ( e~ the size of N) and from t
 Using the Wiener's attack on small private key
 <https://en.wikipedia.org/wiki/Wiener%27s_attack><br>
 
-k/d is somewhere among the convergents of e/N
+`k/d` is somewhere among the convergents of `e/N`
 
 ```python
 sage: lst = continued_fraction(e/n)
@@ -138,12 +138,12 @@ We have to forge a RSA signature of a challenge in 60 sec, given the ability to 
 
 Here is the idea, 
 let `s[i]` be the signature of `m[i]`, ignore the fact that there's hashing, the encryption should be like:
- `s[i] = m[i]^d mod N`
+ ```s[i] = m[i]^d mod N```
 
 So, the challenge give us a `m`, ask us for `s`, then if we have all the prime factors of `m` and their signatures, we can surely reconstruct `s`.
- `m = m[1]*m[2]*m[3]*...*m[n]`
+ ```m = m[1]*m[2]*m[3]*...*m[n]```
 then 
- `s = ( s[1]*s[2]*s[3]*...*s[n] ) mod N`
+ ```s = ( s[1]*s[2]*s[3]*...*s[n] ) mod N```
 
 Since the challenge gave us 60s (I think it's actually 30s :( ), we have to query all the possible signatures of primes we can (about ~600 primes), and wish for a smooth number as our "challenge"
 Here is my script:
