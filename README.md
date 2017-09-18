@@ -1,5 +1,7 @@
 # PicoCTF-2017
 
+#### Official Write-up has been moved to (https://hva314.github.io/blog/2017/04/23/PicoCTF-2017-Crypto-Writeup.html)[Blue's Little Blog]
+
 ## Weird RSA - 90
 
 We have:
